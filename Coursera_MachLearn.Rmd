@@ -48,7 +48,7 @@ testing <- testing[,c(-1,-2,-3,-4,-5,-6,-7)]
 - the original training set sampled to 9000 cases in order to overcome hardware related memory issues
 - the sampled training set is then partitioned into 60/40 into a training and test set to appraise the out-of-sample-error  
 ```{r, echo=FALSE}
-training <- [sample(nrow(training), 9000), ]
+training <- training[sample(nrow(training), 9000), ]
 inTrain <- createDataPartition(y=training$classe, p=0.3,list=FALSE)
 training <- training[inTrain,]
 test <- training[-inTrain,]
