@@ -47,9 +47,9 @@ testing <- testing[,c(-1,-2,-3,-4,-5,-6,-7)]
 ##Data Splicing  
 - the original training set sampled to 9000 cases in order to overcome hardware related memory issues
 - the sampled training set is then partitioned into 60/40 into a training and test set to appraise the out-of-sample-error  
-```{r, echo=FALSE}
-training <- [sample(nrow(training), 9000), ]
-inTrain <- createDataPartition(y=training$classe, p=0.3,list=FALSE)
+```{r, warning=FALSE}
+training <- training[sample(nrow(training), 9000), ]
+inTrain <- createDataPartition(y=training$classe, p=0.6,list=FALSE)
 training <- training[inTrain,]
 test <- training[-inTrain,]
 ```
@@ -59,7 +59,7 @@ test <- training[-inTrain,]
 - cross-validation is used to select the model with highest accuracy  
 - pre-processing is used to adjust the remaining variables, including a Principal-Component-Analysis to identify valuable predictor groups
 - the following graph displays the result of the principal component analysis for components 1 and 2 for the training data partition  
-```{r, echo=FALSE}
+```{r, warning=FALSE}
 modelfit <- train(classe ~.,method="rf",data=training,trControl=trainControl(method="cv"),preProcess=c("center","scale","pca"),prox=TRUE)
 pca <- prcomp(training[, -c(53)], scale.=TRUE)
 biplot(pca, scale=0, cex=.6)
@@ -68,7 +68,7 @@ plot(pca$x[,1], pca$x[,2], xlab="PC1", ylab="PC2")
 
 ## Model Results and Out-of-sample error  
 - the following table and plot display the model results and accurracy including the out-of-sample error (inverse accurracy)  
-```{r, echo=FALSE}
+```{r, warning=FALSE}
 print(modelfit)
 predictions <- predict(modelfit,newdata=test)
 confusionMatrix(predictions,test$classe)
@@ -82,7 +82,7 @@ p
 ## Predictions  
 - in the following, the model is used to predict 20 values from a testing set  
 - the prediction results are saved in 20 separate text files  
-```{r, echo=FALSE}
+```{r, warning=FALSE}
 answers <- predict(modelfit,newdata=testing)
 pml_write_files = function(x){
   n = length(x)
