@@ -1,0 +1,96 @@
+---
+title: "Coursera_MachLearning"
+author: "Manuel Kiewisch"
+date: "Wednesday, July 22, 2015"
+output: html_document
+---
+
+##Session Info (Platform/ Version Information)
+```{r}
+sessionInfo()
+```
+
+##Purpose  
+- predict exercise data from personal activity devices
+- predict if available data per exercise has been collected from a ''correct'' or ''incorrect'' performance
+- report on the model building process and describe the expected out-of-sample error  
+
+##Data  
+- based on the ''Groupware'' data set available at: http://groupware.les.inf.puc-rio.br/har  
+
+##Data Preparation  
+- a training and test data set have been combiled and made available at: 
+- https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv  
+- https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+- the memory available to R is set to 4gb
+- all variables containing missing values have been remove 
+- further, all purely descriptive variables (variables 1--7, i.e. name, id, timestamps) have been removed since they are not expected to be of any predictive value
+- the predictor variable $classe is transformed to a factor variable
+- the remaining variables are scanned for near-Zero-Variables and near-Zero-Variables are removed  
+
+```{r, echo=FALSE}
+memory.limit(size=4000)
+library(caret)
+library(ggplot2)
+setwd("C:\\Users\\ElitebookHP\\Desktop\\coursera_machLearning")
+training1 <- read.table("pml-training.csv",as.is = TRUE, na.strings=c("NA", "-", "?","","#DIV/0!"),sep = ",",header = TRUE)
+training <- training1[,colSums(is.na(training1))==0]
+training <- training[,c(-1,-2,-3,-4,-5,-6,-7)]
+training$classe <- as.factor(training$classe)
+nsv <- nearZeroVar(training,saveMetrics=TRUE)
+training <- training[,c(row.names(nsv[nsv$nzv==FALSE,]))]
+testing1 <- read.table("pml-testing.csv",as.is = TRUE, na.strings=c("NA", "-", "?","","#DIV/0!"),sep = ",",header = TRUE)
+testing <- testing1[,colSums(is.na(testing1))==0]
+testing <- testing[,c(-1,-2,-3,-4,-5,-6,-7)]
+```
+  
+##Data Splicing  
+- the original training set sampled to 9000 cases in order to overcome hardware related memory issues
+- the sampled training set is then partitioned into 60/40 into a training and test set to appraise the out-of-sample-error  
+```{r, echo=FALSE}
+training <- [sample(nrow(training), 9000), ]
+inTrain <- createDataPartition(y=training$classe, p=0.3,list=FALSE)
+training <- training[inTrain,]
+test <- training[-inTrain,]
+```
+
+## Model Building  
+- a 'Random Forest' modeling procedure is used to create the prediction model  
+- cross-validation is used to select the model with highest accuracy  
+- pre-processing is used to adjust the remaining variables, including a Principal-Component-Analysis to identify valuable predictor groups
+- the following graph displays the result of the principal component analysis for components 1 and 2 for the training data partition  
+```{r, echo=FALSE}
+modelfit <- train(classe ~.,method="rf",data=training,trControl=trainControl(method="cv"),preProcess=c("center","scale","pca"),prox=TRUE)
+pca <- prcomp(training[, -c(53)], scale.=TRUE)
+biplot(pca, scale=0, cex=.6)
+plot(pca$x[,1], pca$x[,2], xlab="PC1", ylab="PC2")
+```
+
+## Model Results and Out-of-sample error  
+- the following table and plot display the model results and accurracy including the out-of-sample error (inverse accurracy)  
+```{r, echo=FALSE}
+print(modelfit)
+predictions <- predict(modelfit,newdata=test)
+confusionMatrix(predictions,test$classe)
+
+pred <- data.frame(predictions,test$classe)
+p <- ggplot(pred, aes(x = predictions, y = test$classe))
+p <- p + geom_jitter(position = position_jitter(width = 0.25, height = 0.25))
+p
+```
+
+## Predictions  
+- in the following, the model is used to predict 20 values from a testing set  
+- the prediction results are saved in 20 separate text files  
+```{r, echo=FALSE}
+answers <- predict(modelfit,newdata=testing)
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+
+pml_write_files(answers)
+```
